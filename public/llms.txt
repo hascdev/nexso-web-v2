@@ -1,0 +1,40 @@
+# Nexso
+
+> Empresa chilena de soluciones tecnológicas: software a medida, consultoría TI, transformación digital e integraciones para sector público y privado.
+
+## Sitio
+
+- URL principal: https://nexso.cl
+- Idioma: español (Chile)
+- Empresa: Nexso SpA
+
+## Qué hace Nexso
+
+Nexso alinea la tecnología con los objetivos de negocio de sus clientes. Ofrece desarrollo de software a medida, consultoría y transformación digital, migración de sistemas legacy, y APIs/microservicios con integraciones a ecosistemas como e-commerce, pagos, ERP y RRHH.
+
+## Servicios principales
+
+1. Desarrollo de software a medida (aplicaciones web y plataformas internas)
+2. Consultoría TI y transformación digital
+3. Migración de sistemas legacy
+4. APIs, microservicios e integraciones
+
+## Diferenciadores
+
+- Maquetas funcionales en menos de 24 horas
+- Experiencia en sector público y privado en Chile
+- Cumplimiento: Ley de Compras Públicas, protección de datos, transformación digital del Estado (Ley 21.180)
+
+## Secciones del sitio (anclas)
+
+- Servicios: https://nexso.cl/#servicios
+- Método de trabajo: https://nexso.cl/#metodo
+- Integraciones: https://nexso.cl/#integraciones
+- Sector público: https://nexso.cl/#sector-publico
+- Sector privado: https://nexso.cl/#sector-privado
+- Cumplimiento normativo: https://nexso.cl/#cumplimiento
+- Contacto: https://nexso.cl/#contacto
+
+## Contacto
+
+Formulario en https://nexso.cl/#contacto — consultas comerciales y proyectos a medida.

@@ -8,12 +8,13 @@ import { PrivateSector } from "@/components/PrivateSector";
 import { Compliance } from "@/components/Compliance";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
+import { SeoFaq } from "@/components/SeoFaq";
 
 export default function Home() {
   return (
     <>
       <Nav />
-      <main>
+      <main id="contenido-principal">
         <Hero />
         <Services />
         <Method />
@@ -21,6 +22,7 @@ export default function Home() {
         <PublicSector />
         <PrivateSector />
         <Compliance />
+        <SeoFaq />
         <Contact />
       </main>
       <Footer />
