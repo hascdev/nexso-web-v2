@@ -8,7 +8,7 @@ import {
   Clock,
 } from "@phosphor-icons/react";
 
-type Status = "idle" | "submitting" | "success";
+type Status = "idle" | "submitting" | "success" | "error";
 type Errors = { name?: string; email?: string; message?: string };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,13 +17,17 @@ export function Contact() {
   const reduce = useReducedMotion();
   const [status, setStatus] = useState<Status>("idle");
   const [errors, setErrors] = useState<Errors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitError(null);
+
     const data = new FormData(e.currentTarget);
     const name = (data.get("name") as string)?.trim();
     const email = (data.get("email") as string)?.trim();
     const message = (data.get("message") as string)?.trim();
+    const organization = (data.get("org") as string)?.trim();
 
     const next: Errors = {};
     if (!name) next.name = "Cuéntanos tu nombre.";
@@ -35,7 +39,40 @@ export function Contact() {
     if (Object.keys(next).length > 0) return;
 
     setStatus("submitting");
-    window.setTimeout(() => setStatus("success"), 900);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          message,
+          organization: organization || undefined,
+          website: (data.get("website") as string) ?? "",
+        }),
+      });
+
+      const payload = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+
+      if (!res.ok) {
+        setStatus("error");
+        setSubmitError(
+          payload?.error ??
+            "No pudimos enviar tu mensaje. Intenta de nuevo en unos minutos.",
+        );
+        return;
+      }
+
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setSubmitError(
+        "Error de conexión. Revisa tu red e intenta de nuevo.",
+      );
+    }
   }
 
   return (
@@ -86,7 +123,7 @@ export function Contact() {
                 animate={{ opacity: 1 }}
                 onSubmit={handleSubmit}
                 noValidate
-                className="flex flex-col gap-5"
+                className="relative flex flex-col gap-5"
               >
                 <Field
                   label="Nombre"
@@ -111,6 +148,15 @@ export function Contact() {
                     optional
                   />
                 </div>
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden
+                  className="pointer-events-none absolute h-0 w-0 opacity-0"
+                />
+
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="message"
@@ -132,6 +178,15 @@ export function Contact() {
                     </p>
                   ) : null}
                 </div>
+
+                {submitError ? (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-primary-tint bg-primary-soft px-4 py-3 text-sm text-primary-strong"
+                  >
+                    {submitError}
+                  </p>
+                ) : null}
 
                 <button
                   type="submit"
