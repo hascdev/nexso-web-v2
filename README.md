@@ -63,7 +63,7 @@ Cada hora (`0 * * * *`), Vercel invoca `GET /api/cron/compra-agil` con el header
 El job:
 
 1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con cambios de la **última hora** (`cambio_desde` / `cambio_hasta`, UTC).
-2. Estado por defecto: `publicada`, hasta **50** ítems por ejecución (página 1; paginación lista con `COMPRA_AGIL_MAX_PAGES`).
+2. Estado por defecto: `publicada`, **50** resultados por página y recorrido de **todas** las páginas según `paginacion.total_paginas` (pausa entre requests para respetar rate limit).
 3. Filtra por `nombre` que contenga la palabra clave (por defecto **Software**, sin distinguir mayúsculas).
 4. Si hay coincidencias, envía un correo HTML con estilo Nexso (`#005ad6`) y enlaces al detalle en Mercado Público.
 
@@ -95,8 +95,10 @@ Crea `.env.local` en la raíz (no commitear). Referencia:
 | `COMPRA_AGIL_DETAIL_BASE` | Opcional; base URLs de detalle; default `https://www.mercadopublico.cl` |
 | `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
 | `COMPRA_AGIL_KEYWORD` | Opcional; default `Software` |
-| `COMPRA_AGIL_PAGE_SIZE` | Opcional; default `50` |
-| `COMPRA_AGIL_MAX_PAGES` | Opcional; default `1` (sube para paginar más resultados) |
+| `COMPRA_AGIL_PAGE_SIZE` | Opcional; 15–50 (API); default `50` |
+| `COMPRA_AGIL_PAGE_DELAY_MS` | Opcional; pausa entre páginas; default `400` |
+| `COMPRA_AGIL_MAX_PAGES` | Opcional; tope de páginas (`0` o vacío = todas) |
+| `COMPRA_AGIL_MAX_RETRIES` | Opcional; reintentos ante HTTP 429; default `3` |
 | `COMPRA_AGIL_FROM_EMAIL` | Opcional; remitente alertas (si no, usa `CONTACT_FROM_EMAIL`) |
 | `COMPRA_AGIL_TO_EMAILS` | Opcional; destinatarios alertas (si no, usa `CONTACT_TO_EMAILS`) |
 

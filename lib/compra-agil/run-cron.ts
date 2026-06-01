@@ -11,19 +11,23 @@ import {
   buildCompraAgilEmailHtml,
   buildCompraAgilEmailText,
 } from "./email-template";
+import { logCompraAgil } from "./logger";
 
 const HOUR_MS = 60 * 60 * 1000;
 
 export type CronRunResult = {
   ok: true;
   totalFetched: number;
+  totalResultados: number;
   matched: number;
   pagesFetched: number;
   emailed: boolean;
   window: { desde: string; hasta: string };
+  durationMs: number;
 };
 
 export async function runCompraAgilCron(): Promise<CronRunResult> {
+  const startedAt = Date.now();
   const apiConfig = getCompraAgilConfig();
   const mailConfig = getCompraAgilMailConfig();
 
@@ -39,12 +43,37 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
   const hasta = new Date();
   const desde = new Date(hasta.getTime() - HOUR_MS);
 
-  const { items, pagesFetched } = await fetchCompraAgilChanges(apiConfig, {
-    cambioDesde: desde,
-    cambioHasta: hasta,
+  logCompraAgil("run_started", {
+    window: { desde: desde.toISOString(), hasta: hasta.toISOString() },
+    keyword: apiConfig.keyword,
+    estado: apiConfig.estado,
+    pageSize: apiConfig.pageSize,
+    pageDelayMs: apiConfig.pageDelayMs,
+    maxPagesCap: apiConfig.maxPagesCap,
+    emailToCount: mailConfig.to.length,
+  });
+
+  const fetchStartedAt = Date.now();
+  const { items, pagesFetched, totalResultados } =
+    await fetchCompraAgilChanges(apiConfig, {
+      cambioDesde: desde,
+      cambioHasta: hasta,
+    });
+
+  logCompraAgil("fetch_completed", {
+    pagesFetched,
+    totalResultados,
+    totalFetched: items.length,
+    fetchDurationMs: Date.now() - fetchStartedAt,
   });
 
   const matched = filterByKeyword(items, apiConfig.keyword);
+
+  logCompraAgil("filter_completed", {
+    keyword: apiConfig.keyword,
+    matched: matched.length,
+    matchedCodigos: matched.map((item) => item.codigo),
+  });
 
   let emailed = false;
   if (matched.length > 0) {
@@ -71,11 +100,18 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
       throw new Error(`Resend: ${error.message}`);
     }
     emailed = true;
+    logCompraAgil("email_sent", {
+      matched: matched.length,
+      toCount: mailConfig.to.length,
+    });
+  } else {
+    logCompraAgil("email_skipped", { reason: "no_matches" });
   }
 
-  return {
+  const result: CronRunResult = {
     ok: true,
     totalFetched: items.length,
+    totalResultados,
     matched: matched.length,
     pagesFetched,
     emailed,
@@ -83,5 +119,10 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
       desde: desde.toISOString(),
       hasta: hasta.toISOString(),
     },
+    durationMs: Date.now() - startedAt,
   };
+
+  logCompraAgil("run_completed", { ...result });
+
+  return result;
 }

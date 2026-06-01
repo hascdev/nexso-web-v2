@@ -4,18 +4,19 @@ import type {
   CompraAgilPaginacion,
 } from "./types";
 import type { CompraAgilConfig } from "./config";
+import { logCompraAgil } from "./logger";
+import { retryDelayMs, sleep } from "./rate-limit";
 
 export type FetchCompraAgilParams = {
   cambioDesde: Date;
   cambioHasta: Date;
-  /** Si no se indica, usa config.maxPages */
-  maxPages?: number;
 };
 
 export type FetchCompraAgilResult = {
   items: CompraAgilItem[];
   paginacion: CompraAgilPaginacion | null;
   pagesFetched: number;
+  totalResultados: number;
 };
 
 function toApiIso(date: Date): string {
@@ -31,30 +32,44 @@ export function buildDetailUrl(
   return `${base}${path}`;
 }
 
-export async function fetchCompraAgilChanges(
+function buildListUrl(
   config: CompraAgilConfig,
   params: FetchCompraAgilParams,
-): Promise<FetchCompraAgilResult> {
-  const maxPages = params.maxPages ?? config.maxPages;
-  const allItems: CompraAgilItem[] = [];
-  let lastPagination: CompraAgilPaginacion | null = null;
-  let page = 1;
+  page: number,
+): string {
+  const url = new URL("/v2/compra-agil", config.apiBase);
+  url.searchParams.set("cambio_desde", toApiIso(params.cambioDesde));
+  url.searchParams.set("cambio_hasta", toApiIso(params.cambioHasta));
+  url.searchParams.set("estado", config.estado);
+  url.searchParams.set("tamano_pagina", String(config.pageSize));
+  url.searchParams.set("numero_pagina", String(page));
+  return url.toString();
+}
 
-  while (page <= maxPages) {
-    const url = new URL("/v2/compra-agil", config.apiBase);
-    url.searchParams.set("cambio_desde", toApiIso(params.cambioDesde));
-    url.searchParams.set("cambio_hasta", toApiIso(params.cambioHasta));
-    url.searchParams.set("estado", config.estado);
-    url.searchParams.set("tamano_pagina", String(config.pageSize));
-    url.searchParams.set("numero_pagina", String(page));
-
-    const res = await fetch(url.toString(), {
+async function fetchCompraAgilPage(
+  config: CompraAgilConfig,
+  url: string,
+): Promise<CompraAgilApiResponse> {
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    const res = await fetch(url, {
       headers: {
         ticket: config.ticket,
         Accept: "application/json",
       },
       cache: "no-store",
     });
+
+    if (res.status === 429) {
+      if (attempt >= config.maxRetries) {
+        throw new Error(
+          "Compra Ágil API: rate limit (429) tras reintentos. Aumenta COMPRA_AGIL_PAGE_DELAY_MS.",
+        );
+      }
+      const waitMs = retryDelayMs(attempt, res.headers.get("Retry-After"));
+      logCompraAgil("api_rate_limited", { attempt, waitMs, url });
+      await sleep(waitMs);
+      continue;
+    }
 
     if (!res.ok) {
       throw new Error(
@@ -68,21 +83,67 @@ export async function fetchCompraAgilChanges(
       throw new Error("Compra Ágil API devolvió una respuesta inválida.");
     }
 
-    allItems.push(...data.payload.items);
-    lastPagination = data.payload.paginacion;
+    return data;
+  }
 
-    const totalPages = data.payload.paginacion.total_paginas;
-    if (page >= totalPages || page >= maxPages) {
+  throw new Error("Compra Ágil API: no se pudo obtener la página.");
+}
+
+/**
+ * Recorre todas las páginas reportadas en `paginacion.total_paginas`
+ * (o hasta `maxPagesCap` si está configurado).
+ */
+export async function fetchCompraAgilChanges(
+  config: CompraAgilConfig,
+  params: FetchCompraAgilParams,
+): Promise<FetchCompraAgilResult> {
+  const allItems: CompraAgilItem[] = [];
+  let lastPagination: CompraAgilPaginacion | null = null;
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    if (config.maxPagesCap !== null && page > config.maxPagesCap) {
+      logCompraAgil("pagination_capped", {
+        maxPagesCap: config.maxPagesCap,
+        totalPages,
+      });
+      break;
+    }
+
+    const data = await fetchCompraAgilPage(
+      config,
+      buildListUrl(config, params, page),
+    );
+
+    const pageItems = data.payload!.items;
+    allItems.push(...pageItems);
+    lastPagination = data.payload!.paginacion;
+    totalPages = lastPagination.total_paginas;
+
+    logCompraAgil("page_fetched", {
+      page,
+      totalPages,
+      itemsInPage: pageItems.length,
+      accumulated: allItems.length,
+      totalResultados: lastPagination.total_resultados,
+    });
+
+    if (page >= totalPages) {
       break;
     }
 
     page += 1;
+    if (config.pageDelayMs > 0) {
+      await sleep(config.pageDelayMs);
+    }
   }
 
   return {
     items: allItems,
     paginacion: lastPagination,
     pagesFetched: page,
+    totalResultados: lastPagination?.total_resultados ?? allItems.length,
   };
 }
 
