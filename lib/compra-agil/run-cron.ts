@@ -12,8 +12,15 @@ import {
   buildCompraAgilEmailText,
 } from "./email-template";
 import { logCompraAgil } from "./logger";
+import { getLastCompleteHourWindowChile } from "./timezone";
 
-const HOUR_MS = 60 * 60 * 1000;
+export type CronWindow = {
+  desde: string;
+  hasta: string;
+  desdeChile: string;
+  hastaChile: string;
+  timezone: string;
+};
 
 export type CronRunResult = {
   ok: true;
@@ -22,7 +29,7 @@ export type CronRunResult = {
   matched: number;
   pagesFetched: number;
   emailed: boolean;
-  window: { desde: string; hasta: string };
+  window: CronWindow;
   durationMs: number;
 };
 
@@ -40,11 +47,17 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
     );
   }
 
-  const hasta = new Date();
-  const desde = new Date(hasta.getTime() - HOUR_MS);
+  const { desde, hasta, chile, utc } = getLastCompleteHourWindowChile();
+  const window: CronWindow = {
+    desde: utc.desde,
+    hasta: utc.hasta,
+    desdeChile: chile.desde,
+    hastaChile: chile.hasta,
+    timezone: "America/Santiago",
+  };
 
   logCompraAgil("run_started", {
-    window: { desde: desde.toISOString(), hasta: hasta.toISOString() },
+    window,
     keyword: apiConfig.keyword,
     estado: apiConfig.estado,
     pageSize: apiConfig.pageSize,
@@ -65,6 +78,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
     totalResultados,
     totalFetched: items.length,
     fetchDurationMs: Date.now() - fetchStartedAt,
+    window,
   });
 
   const matched = filterByKeyword(items, apiConfig.keyword);
@@ -115,10 +129,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
     matched: matched.length,
     pagesFetched,
     emailed,
-    window: {
-      desde: desde.toISOString(),
-      hasta: hasta.toISOString(),
-    },
+    window,
     durationMs: Date.now() - startedAt,
   };
 
