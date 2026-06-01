@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nexso Web v2
 
-## Getting Started
+Sitio corporativo de [Nexso](https://nexso.cl): landing en español (Chile) con formulario de contacto, SEO orientado a buscadores y asistentes de IA, y un cron en Vercel que alerta oportunidades de **Compra Ágil** (Mercado Público) filtradas por palabra clave.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, Turbopack en dev)
+- **React 19**, **TypeScript**, **Tailwind CSS v4**
+- **Motion** (animaciones), **Phosphor Icons**
+- **Resend** (correo transaccional)
+- **Vercel** (deploy, Analytics, Cron Jobs)
+
+## Inicio rápido
 
 ```bash
+npm install
+# Crea .env.local con las variables de la tabla inferior
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build   # build de producción
+npm run start   # servir build local
+npm run lint    # ESLint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estructura del proyecto
 
-## Learn More
+```
+app/
+  page.tsx              # Landing (secciones + FAQ SEO)
+  layout.tsx            # Metadata, fuentes, JSON-LD
+  robots.ts / sitemap.ts
+  api/
+    contact/route.ts    # POST formulario de contacto
+    cron/compra-agil/   # Cron Compra Ágil (GET/POST)
+components/             # UI por sección (Hero, Contact, etc.)
+lib/
+  contact/              # Validación y envío Resend (contacto)
+  compra-agil/          # API Mercado Público, filtro, email cron
+  seo/                  # URLs, schema, helpers metadata
+public/
+  llms.txt              # Resumen para crawlers de IA
+vercel.json             # Cron: cada hora en :00
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Funcionalidades
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Landing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Página única con navegación por anclas: servicios, método, integraciones, sector público/privado, cumplimiento, FAQ y contacto. Animaciones con `prefers-reduced-motion` respetado donde aplica.
 
-## Deploy on Vercel
+### Formulario de contacto
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`POST /api/contact` — valida campos, honeypot (`website`) y envía correo vía Resend a los destinatarios configurados.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Cron Compra Ágil
+
+Cada hora (`0 * * * *`), Vercel invoca `GET /api/cron/compra-agil` con el header que define la plataforma cuando existe `CRON_SECRET` en el proyecto.
+
+El job:
+
+1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con cambios de la **última hora** (`cambio_desde` / `cambio_hasta`, UTC).
+2. Estado por defecto: `publicada`, hasta **50** ítems por ejecución (página 1; paginación lista con `COMPRA_AGIL_MAX_PAGES`).
+3. Filtra por `nombre` que contenga la palabra clave (por defecto **Software**, sin distinguir mayúsculas).
+4. Si hay coincidencias, envía un correo HTML con estilo Nexso (`#005ad6`) y enlaces al detalle en Mercado Público.
+
+**Probar en local** (con `npm run dev` y variables cargadas):
+
+```bash
+curl -X POST http://localhost:3000/api/cron/compra-agil \
+  -H "Authorization: Bearer TU_CRON_SECRET"
+```
+
+Respuesta JSON de ejemplo: `totalFetched`, `matched`, `emailed`, `window`.
+
+### SEO
+
+Metadata en `layout.tsx`, `robots.txt` (incluye bots de IA), `sitemap.xml`, JSON-LD y `public/llms.txt`.
+
+## Variables de entorno
+
+Crea `.env.local` en la raíz (no commitear). Referencia:
+
+| Variable | Uso |
+|----------|-----|
+| `RESEND_API_KEY` | API key de [Resend](https://resend.com) |
+| `CONTACT_FROM_EMAIL` | Remitente verificado, ej. `Nexso <contacto@nexso.cl>` |
+| `CONTACT_TO_EMAILS` | Destinatarios contacto (coma) |
+| `CRON_SECRET` | Secreto para autorizar el cron (Vercel lo envía como `Bearer`) |
+| `MERCADO_PUBLICO_TICKET` | Ticket API Mercado Público (header `ticket`) |
+| `MERCADO_PUBLICO_API_BASE` | Opcional; default `https://api2.mercadopublico.cl` |
+| `COMPRA_AGIL_DETAIL_BASE` | Opcional; base URLs de detalle; default `https://www.mercadopublico.cl` |
+| `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
+| `COMPRA_AGIL_KEYWORD` | Opcional; default `Software` |
+| `COMPRA_AGIL_PAGE_SIZE` | Opcional; default `50` |
+| `COMPRA_AGIL_MAX_PAGES` | Opcional; default `1` (sube para paginar más resultados) |
+| `COMPRA_AGIL_FROM_EMAIL` | Opcional; remitente alertas (si no, usa `CONTACT_FROM_EMAIL`) |
+| `COMPRA_AGIL_TO_EMAILS` | Opcional; destinatarios alertas (si no, usa `CONTACT_TO_EMAILS`) |
+
+En **Vercel**, configura las mismas variables en el proyecto y despliega; el cron de `vercel.json` solo corre en producción (plan con Cron Jobs habilitado).
+
+## Deploy en Vercel
+
+1. Conecta el repositorio e importa el proyecto (root: `nexso-web-v2` si el monorepo lo requiere).
+2. Añade todas las variables de entorno anteriores.
+3. Deploy: el cron se registra automáticamente desde `vercel.json`.
+
+Documentación: [Next.js en Vercel](https://nextjs.org/docs/app/building-your-application/deploying), [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs).
+
+## Licencia
+
+Proyecto privado — uso interno Nexso / Stimar.
