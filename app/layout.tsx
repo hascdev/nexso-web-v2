@@ -77,6 +77,10 @@ export const metadata: Metadata = {
     title: TITLE_DEFAULT,
     description: OG_DESCRIPTION,
   },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+  },
   other: {
     "geo.region": "CL",
     "geo.placename": "Chile",
