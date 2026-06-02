@@ -62,7 +62,7 @@ Cada hora (`0 * * * *`), Vercel invoca `GET /api/cron/compra-agil` con el header
 
 El job:
 
-1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con la **última hora completa en Chile** (`America/Santiago`), enviada a la API como `cambio_desde` / `cambio_hasta` en UTC (ej. 18:00–19:00 CLT → 22:00–23:00Z en invierno).
+1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con la **última hora completa en Chile** (`America/Santiago`). La API usa hora civil chilena con sufijo `Z` (ej. `cambio_desde=2026-06-02T16:00:00Z`, no UTC convertido).
 2. Estado por defecto: `publicada`, **50** resultados por página y recorrido de **todas** las páginas según `paginacion.total_paginas` (pausa entre requests para respetar rate limit).
 3. Filtra por `nombre` que contenga **alguna** palabra clave (por defecto: Software, licencias, desarrollo, plataforma; sin distinguir mayúsculas).
 4. Si hay coincidencias, envía un correo HTML con estilo Nexso (`#005ad6`) y enlaces al detalle en Mercado Público.

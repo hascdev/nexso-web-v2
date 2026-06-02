@@ -11,6 +11,10 @@ type ZonedParts = {
   second: number;
 };
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
 function getZonedParts(date: Date, timeZone: string): ZonedParts {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -35,11 +39,8 @@ function getZonedParts(date: Date, timeZone: string): ZonedParts {
   };
 }
 
-/** Convierte una fecha/hora civil en `timeZone` al instante UTC (`Date`). */
-function localTimeInZoneToUtc(
-  parts: ZonedParts,
-  timeZone: string,
-): Date {
+/** Convierte hora civil Chile → instante UTC (solo para emails / display). */
+function chilePartsToUtc(parts: ZonedParts): Date {
   let utc = Date.UTC(
     parts.year,
     parts.month - 1,
@@ -50,7 +51,7 @@ function localTimeInZoneToUtc(
   );
 
   for (let i = 0; i < 5; i++) {
-    const zoned = getZonedParts(new Date(utc), timeZone);
+    const zoned = getZonedParts(new Date(utc), CHILE_TZ);
     const targetMs = Date.UTC(
       parts.year,
       parts.month - 1,
@@ -75,58 +76,68 @@ function localTimeInZoneToUtc(
   return new Date(utc);
 }
 
-export function formatDateTimeChile(date: Date): string {
-  return new Intl.DateTimeFormat("es-CL", {
-    timeZone: CHILE_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    hourCycle: "h23",
-  }).format(date);
+/**
+ * Formato que espera la API de Mercado Público: componentes de hora Chile con sufijo Z
+ * (no es UTC real; ej. 16:00 Chile → `2026-06-02T16:00:00Z`).
+ */
+export function formatApiDateTime(parts: ZonedParts): string {
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}T${pad2(parts.hour)}:${pad2(parts.minute)}:${pad2(parts.second)}Z`;
+}
+
+export function formatDateTimeChile(parts: ZonedParts): string {
+  return `${pad2(parts.day)}-${pad2(parts.month)}-${parts.year}, ${pad2(parts.hour)}:${pad2(parts.minute)}:${pad2(parts.second)}`;
 }
 
 export type ChileHourWindow = {
+  /** Parámetros `cambio_desde` / `cambio_hasta` para la API. */
+  api: { desde: string; hasta: string };
+  chile: { desde: string; hasta: string };
+  /** Instantes UTC equivalentes (solo para plantillas de correo). */
   desde: Date;
   hasta: Date;
-  chile: { desde: string; hasta: string };
-  utc: { desde: string; hasta: string };
 };
 
 /**
- * Ventana de la última hora completa en Chile: [inicio hora anterior, inicio hora actual).
- * Ej. si son las 19:05 en Santiago → 18:00:00 – 19:00:00 (se envía a la API en UTC).
+ * Última hora completa en Chile: [hora anterior, hora actual) en hora civil.
+ * Ej. cron a las 17:05 CLT → API: T16:00:00Z – T17:00:00Z.
  */
 export function getLastCompleteHourWindowChile(
   now = new Date(),
 ): ChileHourWindow {
   const current = getZonedParts(now, CHILE_TZ);
-  const hasta = localTimeInZoneToUtc(
-    {
-      year: current.year,
-      month: current.month,
-      day: current.day,
-      hour: current.hour,
-      minute: 0,
-      second: 0,
-    },
+  const hastaParts: ZonedParts = {
+    year: current.year,
+    month: current.month,
+    day: current.day,
+    hour: current.hour,
+    minute: 0,
+    second: 0,
+  };
+
+  const hastaUtc = chilePartsToUtc(hastaParts);
+  const desdeZoned = getZonedParts(
+    new Date(hastaUtc.getTime() - HOUR_MS),
     CHILE_TZ,
   );
-  const desde = new Date(hasta.getTime() - HOUR_MS);
+  const desdeParts: ZonedParts = {
+    year: desdeZoned.year,
+    month: desdeZoned.month,
+    day: desdeZoned.day,
+    hour: desdeZoned.hour,
+    minute: 0,
+    second: 0,
+  };
 
   return {
-    desde,
-    hasta,
+    api: {
+      desde: formatApiDateTime(desdeParts),
+      hasta: formatApiDateTime(hastaParts),
+    },
     chile: {
-      desde: formatDateTimeChile(desde),
-      hasta: formatDateTimeChile(hasta),
+      desde: formatDateTimeChile(desdeParts),
+      hasta: formatDateTimeChile(hastaParts),
     },
-    utc: {
-      desde: desde.toISOString(),
-      hasta: hasta.toISOString(),
-    },
+    desde: chilePartsToUtc(desdeParts),
+    hasta: chilePartsToUtc(hastaParts),
   };
 }

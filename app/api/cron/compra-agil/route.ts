@@ -1,5 +1,5 @@
 import { runCompraAgilCron } from "@/lib/compra-agil/run-cron";
-import { logCompraAgil, logCompraAgilError } from "@/lib/compra-agil/logger";
+import { logCompraAgilError } from "@/lib/compra-agil/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

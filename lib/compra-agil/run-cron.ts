@@ -16,6 +16,7 @@ import { logCompraAgil } from "./logger";
 import { getLastCompleteHourWindowChile } from "./timezone";
 
 export type CronWindow = {
+	/** Valores enviados a `cambio_desde` / `cambio_hasta` (hora civil Chile + Z). */
 	desde: string;
 	hasta: string;
 	desdeChile: string;
@@ -38,8 +39,6 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 	const startedAt = Date.now();
 	const apiConfig = getCompraAgilConfig();
 	const mailConfig = getCompraAgilMailConfig();
-	console.log("apiConfig", apiConfig);
-	console.log("mailConfig", mailConfig);
 
 	if (!apiConfig) {
 		throw new Error("Falta MERCADO_PUBLICO_TICKET en variables de entorno.");
@@ -50,22 +49,41 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		);
 	}
 
-	const { desde, hasta, chile, utc } = getLastCompleteHourWindowChile();
+	const hourWindow = getLastCompleteHourWindowChile();
 	const window: CronWindow = {
-		desde: utc.desde,
-		hasta: utc.hasta,
-		desdeChile: chile.desde,
-		hastaChile: chile.hasta,
+		desde: hourWindow.api.desde,
+		hasta: hourWindow.api.hasta,
+		desdeChile: hourWindow.chile.desde,
+		hastaChile: hourWindow.chile.hasta,
 		timezone: "America/Santiago",
 	};
 
-	console.log("fetching compra agil changes", { desde, hasta });
+	logCompraAgil("run_started", {
+		window,
+		keywords: apiConfig.keywords,
+		estado: apiConfig.estado,
+		pageSize: apiConfig.pageSize,
+		pageDelayMs: apiConfig.pageDelayMs,
+		maxPagesCap: apiConfig.maxPagesCap,
+		emailToCount: mailConfig.to.length,
+	});
 
-	const { items, pagesFetched, totalResultados } = await fetchCompraAgilChanges(apiConfig, { cambioDesde: desde, cambioHasta: hasta, });
-	console.log("items", items.length);
+	const fetchStartedAt = Date.now();
+	const { items, pagesFetched, totalResultados } =
+		await fetchCompraAgilChanges(apiConfig, {
+			cambioDesde: hourWindow.api.desde,
+			cambioHasta: hourWindow.api.hasta,
+		});
+
+	logCompraAgil("fetch_completed", {
+		pagesFetched,
+		totalResultados,
+		totalFetched: items.length,
+		fetchDurationMs: Date.now() - fetchStartedAt,
+		window,
+	});
 
 	const matched = filterByKeywords(items, apiConfig.keywords);
-	console.log("matched", matched.length);
 
 	logCompraAgil("filter_completed", {
 		keywords: apiConfig.keywords,
@@ -78,8 +96,8 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		const resend = new Resend(mailConfig.apiKey);
 		const emailPayload = {
 			keywordsLabel: formatKeywordsLabel(apiConfig.keywords),
-			desde,
-			hasta,
+			desde: hourWindow.desde,
+			hasta: hourWindow.hasta,
 			items: matched,
 			totalFetched: items.length,
 			pagesFetched,
