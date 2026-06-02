@@ -64,7 +64,11 @@ El job:
 
 1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con la **última hora completa en Chile** (`America/Santiago`). La API usa hora civil chilena con sufijo `Z` (ej. `cambio_desde=2026-06-02T16:00:00Z`, no UTC convertido).
 2. Estado por defecto: `publicada`, **50** resultados por página y recorrido de **todas** las páginas según `paginacion.total_paginas` (pausa entre requests para respetar rate limit).
-3. Filtra por `nombre` que contenga **alguna** palabra clave (por defecto: Software, licencias, desarrollo, plataforma; sin distinguir mayúsculas).
+3. Filtra oportunidades de **desarrollo de software** con reglas por categoría (ignore case, sin tildes):
+   - **software** — contiene «software»
+   - **licencia** — contiene «licencia», excepto licencia de conducir
+   - **desarrollo** — solo «desarrollo de programa/aplicación/sistema/software»
+   - **plataforma** — solo contexto digital (plataforma web/cloud/digital, o cerca de términos IT; excluye plataformas elevadoras, de carga, etc.)
 4. Si hay coincidencias, envía un correo HTML con estilo Nexso (`#005ad6`) y enlaces al detalle en Mercado Público.
 
 **Probar en local** (con `npm run dev` y variables cargadas):
@@ -94,7 +98,7 @@ Crea `.env.local` en la raíz (no commitear). Referencia:
 | `MERCADO_PUBLICO_API_BASE` | Opcional; default `https://api2.mercadopublico.cl` |
 | `COMPRA_AGIL_DETAIL_BASE` | Opcional; base URLs de detalle; default `https://www.mercadopublico.cl` |
 | `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
-| `COMPRA_AGIL_KEYWORDS` | Opcional; separadas por coma (también acepta `COMPRA_AGIL_KEYWORD` legacy). Default: `Software,licencias,desarrollo,plataforma` |
+| `COMPRA_AGIL_KEYWORDS` | Opcional; reglas activas separadas por coma: `software,licencia,desarrollo,plataforma` (default: todas) |
 | `COMPRA_AGIL_PAGE_SIZE` | Opcional; 15–50 (API); default `50` |
 | `COMPRA_AGIL_PAGE_DELAY_MS` | Opcional; pausa entre páginas; default `400` |
 | `COMPRA_AGIL_MAX_PAGES` | Opcional; tope de páginas (`0` o vacío = todas) |

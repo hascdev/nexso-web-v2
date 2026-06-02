@@ -1,10 +1,8 @@
 import { Resend } from "resend";
-import {
-	fetchCompraAgilChanges,
-	filterByKeywords,
-} from "./client";
+import { fetchCompraAgilChanges } from "./client";
 import {
 	formatKeywordsLabel,
+	formatKeywordsShort,
 	getCompraAgilConfig,
 	getCompraAgilMailConfig,
 } from "./config";
@@ -12,6 +10,10 @@ import {
 	buildCompraAgilEmailHtml,
 	buildCompraAgilEmailText,
 } from "./email-template";
+import {
+	filterCompraAgilItems,
+	getMatchReasons,
+} from "./filter";
 import { logCompraAgil } from "./logger";
 import { getLastCompleteHourWindowChile } from "./timezone";
 
@@ -60,7 +62,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 
 	logCompraAgil("run_started", {
 		window,
-		keywords: apiConfig.keywords,
+		filterRules: apiConfig.filterRules,
 		estado: apiConfig.estado,
 		pageSize: apiConfig.pageSize,
 		pageDelayMs: apiConfig.pageDelayMs,
@@ -83,19 +85,23 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		window,
 	});
 
-	const matched = filterByKeywords(items, apiConfig.keywords);
+	const matched = filterCompraAgilItems(items, apiConfig.filterRules);
 
 	logCompraAgil("filter_completed", {
-		keywords: apiConfig.keywords,
+		filterRules: apiConfig.filterRules,
 		matched: matched.length,
-		matchedCodigos: matched.map((item) => item.codigo),
+		matchedItems: matched.map((item) => ({
+			codigo: item.codigo,
+			reasons: getMatchReasons(item.nombre, apiConfig.filterRules),
+		})),
 	});
 
 	let emailed = false;
 	if (matched.length > 0) {
 		const resend = new Resend(mailConfig.apiKey);
+		const rulesLabel = formatKeywordsLabel(apiConfig.filterRules);
 		const emailPayload = {
-			keywordsLabel: formatKeywordsLabel(apiConfig.keywords),
+			keywordsLabel: rulesLabel,
 			desde: hourWindow.desde,
 			hasta: hourWindow.hasta,
 			items: matched,
@@ -107,7 +113,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		const { error } = await resend.emails.send({
 			from: mailConfig.from,
 			to: mailConfig.to,
-			subject: `[Nexso] ${matched.length} Compra Ágil (${apiConfig.keywords.join(", ")})`,
+			subject: `[Nexso] ${matched.length} Compra Ágil (${formatKeywordsShort(apiConfig.filterRules)})`,
 			html: buildCompraAgilEmailHtml(emailPayload),
 			text: buildCompraAgilEmailText(emailPayload),
 		});
