@@ -48,7 +48,7 @@ function renderItemRow(item: CompraAgilItem, detailBase: string): string {
 }
 
 export function buildCompraAgilEmailHtml(options: {
-  keyword: string;
+  keywordsLabel: string;
   desde: Date;
   hasta: Date;
   items: CompraAgilItem[];
@@ -56,12 +56,19 @@ export function buildCompraAgilEmailHtml(options: {
   pagesFetched: number;
   detailBase: string;
 }): string {
-  const { keyword, desde, hasta, items, totalFetched, pagesFetched, detailBase } =
-    options;
+  const {
+    keywordsLabel,
+    desde,
+    hasta,
+    items,
+    totalFetched,
+    pagesFetched,
+    detailBase,
+  } = options;
   const rows =
     items.length > 0
       ? items.map((item) => renderItemRow(item, detailBase)).join("")
-      : `<tr><td colspan="2" style="padding:20px 0;color:#6b7280;font-size:14px;">No se encontraron oportunidades con la palabra «${escapeHtml(keyword)}» en este período.</td></tr>`;
+      : `<tr><td colspan="2" style="padding:20px 0;color:#6b7280;font-size:14px;">No se encontraron oportunidades que coincidan con ${escapeHtml(keywordsLabel)} en este período.</td></tr>`;
 
   return `
 <!DOCTYPE html>
@@ -69,7 +76,7 @@ export function buildCompraAgilEmailHtml(options: {
 <body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#111827;">
   <div style="max-width:640px;margin:24px auto;padding:28px;background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;">
     <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#005ad6;">Nexso · Compra Ágil</p>
-    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#111827;">Oportunidades con «${escapeHtml(keyword)}»</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#111827;">Oportunidades: ${escapeHtml(keywordsLabel)}</h1>
     <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#6b7280;">
       Cambios publicados entre ${escapeHtml(formatRange(desde, hasta))}. Se revisaron ${totalFetched} registros (${pagesFetched} página${pagesFetched === 1 ? "" : "s"}).
     </p>
@@ -89,7 +96,7 @@ export function buildCompraAgilEmailHtml(options: {
 }
 
 export function buildCompraAgilEmailText(options: {
-  keyword: string;
+  keywordsLabel: string;
   desde: Date;
   hasta: Date;
   items: CompraAgilItem[];
@@ -97,18 +104,25 @@ export function buildCompraAgilEmailText(options: {
   pagesFetched: number;
   detailBase: string;
 }): string {
-  const { keyword, desde, hasta, items, totalFetched, pagesFetched, detailBase } =
-    options;
+  const {
+    keywordsLabel,
+    desde,
+    hasta,
+    items,
+    totalFetched,
+    pagesFetched,
+    detailBase,
+  } = options;
   const header = [
     "Nexso · Compra Ágil",
-    `Oportunidades con «${keyword}»`,
+    `Oportunidades: ${keywordsLabel}`,
     `Período: ${formatRange(desde, hasta)}`,
     `Registros revisados: ${totalFetched} (${pagesFetched} página(s))`,
     "",
   ];
 
   if (items.length === 0) {
-    return [...header, `Sin coincidencias para «${keyword}».`, ""].join("\n");
+    return [...header, `Sin coincidencias para ${keywordsLabel}.`, ""].join("\n");
   }
 
   const lines = items.map((item, i) => {

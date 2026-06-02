@@ -64,7 +64,7 @@ El job:
 
 1. Consulta `https://api2.mercadopublico.cl/v2/compra-agil` con la **última hora completa en Chile** (`America/Santiago`), enviada a la API como `cambio_desde` / `cambio_hasta` en UTC (ej. 18:00–19:00 CLT → 22:00–23:00Z en invierno).
 2. Estado por defecto: `publicada`, **50** resultados por página y recorrido de **todas** las páginas según `paginacion.total_paginas` (pausa entre requests para respetar rate limit).
-3. Filtra por `nombre` que contenga la palabra clave (por defecto **Software**, sin distinguir mayúsculas).
+3. Filtra por `nombre` que contenga **alguna** palabra clave (por defecto: Software, licencias, desarrollo, plataforma; sin distinguir mayúsculas).
 4. Si hay coincidencias, envía un correo HTML con estilo Nexso (`#005ad6`) y enlaces al detalle en Mercado Público.
 
 **Probar en local** (con `npm run dev` y variables cargadas):
@@ -94,7 +94,7 @@ Crea `.env.local` en la raíz (no commitear). Referencia:
 | `MERCADO_PUBLICO_API_BASE` | Opcional; default `https://api2.mercadopublico.cl` |
 | `COMPRA_AGIL_DETAIL_BASE` | Opcional; base URLs de detalle; default `https://www.mercadopublico.cl` |
 | `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
-| `COMPRA_AGIL_KEYWORD` | Opcional; default `Software` |
+| `COMPRA_AGIL_KEYWORDS` | Opcional; separadas por coma (también acepta `COMPRA_AGIL_KEYWORD` legacy). Default: `Software,licencias,desarrollo,plataforma` |
 | `COMPRA_AGIL_PAGE_SIZE` | Opcional; 15–50 (API); default `50` |
 | `COMPRA_AGIL_PAGE_DELAY_MS` | Opcional; pausa entre páginas; default `400` |
 | `COMPRA_AGIL_MAX_PAGES` | Opcional; tope de páginas (`0` o vacío = todas) |

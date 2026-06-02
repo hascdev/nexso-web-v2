@@ -147,12 +147,18 @@ export async function fetchCompraAgilChanges(
   };
 }
 
-export function filterByKeyword(
+/** Coincide si el nombre contiene al menos una palabra clave (ignore case). */
+export function filterByKeywords(
   items: CompraAgilItem[],
-  keyword: string,
+  keywords: string[],
 ): CompraAgilItem[] {
-  const needle = keyword.trim().toLowerCase();
-  if (!needle) return items;
+  const needles = keywords
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean);
+  if (needles.length === 0) return items;
 
-  return items.filter((item) => item.nombre.toLowerCase().includes(needle));
+  return items.filter((item) => {
+    const nombre = item.nombre.toLowerCase();
+    return needles.some((needle) => nombre.includes(needle));
+  });
 }

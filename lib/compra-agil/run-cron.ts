@@ -1,9 +1,10 @@
 import { Resend } from "resend";
 import {
   fetchCompraAgilChanges,
-  filterByKeyword,
+  filterByKeywords,
 } from "./client";
 import {
+  formatKeywordsLabel,
   getCompraAgilConfig,
   getCompraAgilMailConfig,
 } from "./config";
@@ -58,7 +59,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 
   logCompraAgil("run_started", {
     window,
-    keyword: apiConfig.keyword,
+    keywords: apiConfig.keywords,
     estado: apiConfig.estado,
     pageSize: apiConfig.pageSize,
     pageDelayMs: apiConfig.pageDelayMs,
@@ -81,10 +82,10 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
     window,
   });
 
-  const matched = filterByKeyword(items, apiConfig.keyword);
+  const matched = filterByKeywords(items, apiConfig.keywords);
 
   logCompraAgil("filter_completed", {
-    keyword: apiConfig.keyword,
+    keywords: apiConfig.keywords,
     matched: matched.length,
     matchedCodigos: matched.map((item) => item.codigo),
   });
@@ -93,7 +94,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
   if (matched.length > 0) {
     const resend = new Resend(mailConfig.apiKey);
     const emailPayload = {
-      keyword: apiConfig.keyword,
+      keywordsLabel: formatKeywordsLabel(apiConfig.keywords),
       desde,
       hasta,
       items: matched,
@@ -105,7 +106,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
     const { error } = await resend.emails.send({
       from: mailConfig.from,
       to: mailConfig.to,
-      subject: `[Nexso] ${matched.length} Compra Ágil con «${apiConfig.keyword}»`,
+      subject: `[Nexso] ${matched.length} Compra Ágil (${apiConfig.keywords.join(", ")})`,
       html: buildCompraAgilEmailHtml(emailPayload),
       text: buildCompraAgilEmailText(emailPayload),
     });

@@ -1,6 +1,40 @@
 const PAGE_SIZE_MIN = 15;
 const PAGE_SIZE_MAX = 50;
 
+export const DEFAULT_COMPRA_AGIL_KEYWORDS = [
+  "Software",
+  "licencias",
+  "desarrollo",
+  "plataforma",
+] as const;
+
+export function parseCompraAgilKeywords(raw?: string): string[] {
+  const source =
+    raw?.trim() ||
+    process.env.COMPRA_AGIL_KEYWORD?.trim() ||
+    DEFAULT_COMPRA_AGIL_KEYWORDS.join(",");
+
+  const keywords = source
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  return keywords.length > 0 ? keywords : [...DEFAULT_COMPRA_AGIL_KEYWORDS];
+}
+
+/** Texto legible: «A», «B» o «C» */
+export function formatKeywordsLabel(keywords: string[]): string {
+  if (keywords.length === 0) return "";
+  if (keywords.length === 1) return `«${keywords[0]}»`;
+  if (keywords.length === 2) return `«${keywords[0]}» o «${keywords[1]}»`;
+  const last = keywords[keywords.length - 1];
+  const rest = keywords
+    .slice(0, -1)
+    .map((k) => `«${k}»`)
+    .join(", ");
+  return `${rest} o «${last}»`;
+}
+
 export function clampPageSize(size: number): number {
   if (!Number.isFinite(size)) return PAGE_SIZE_MAX;
   return Math.min(PAGE_SIZE_MAX, Math.max(PAGE_SIZE_MIN, Math.floor(size)));
@@ -10,7 +44,7 @@ export type CompraAgilConfig = {
   ticket: string;
   apiBase: string;
   detailBase: string;
-  keyword: string;
+  keywords: string[];
   pageSize: number;
   /** Pausa entre páginas para no saturar la API (ms). */
   pageDelayMs: number;
@@ -45,7 +79,9 @@ export function getCompraAgilConfig(): CompraAgilConfig | null {
     detailBase:
       process.env.COMPRA_AGIL_DETAIL_BASE?.trim() ||
       "https://www.mercadopublico.cl",
-    keyword: process.env.COMPRA_AGIL_KEYWORD?.trim() || "Software",
+    keywords: parseCompraAgilKeywords(
+      process.env.COMPRA_AGIL_KEYWORDS?.trim(),
+    ),
     pageSize: clampPageSize(pageSize),
     pageDelayMs:
       Number.isFinite(pageDelayMs) && pageDelayMs >= 0 ? pageDelayMs : 400,
