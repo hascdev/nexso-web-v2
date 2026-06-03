@@ -74,9 +74,9 @@ export function buildCompraAgilEmailHtml(options: {
 <!DOCTYPE html>
 <html lang="es">
 <body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#111827;">
-  <div style="max-width:640px;margin:24px auto;padding:28px;background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;">
+  <div style="max-width:640px;margin:24px auto;padding:28px;background:#ffffff;border-radius:0px;border:1px solid #e5e7eb;">
     <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#005ad6;">Nexso · Compra Ágil</p>
-    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#111827;">Oportunidades: ${escapeHtml(keywordsLabel)}</h1>
+    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#111827;">${items.length} ${items.length === 1 ? "oportunidad" : "oportunidades"} encontradas</h1>
     <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#6b7280;">
       Cambios publicados entre ${escapeHtml(formatRange(desde, hasta))}. Se revisaron ${totalFetched} registros (${pagesFetched} página${pagesFetched === 1 ? "" : "s"}).
     </p>
@@ -115,7 +115,7 @@ export function buildCompraAgilEmailText(options: {
   } = options;
   const header = [
     "Nexso · Compra Ágil",
-    `Oportunidades: ${keywordsLabel}`,
+    `${items.length} ${items.length === 1 ? "oportunidad" : "oportunidades"} encontradas`,
     `Período: ${formatRange(desde, hasta)}`,
     `Registros revisados: ${totalFetched} (${pagesFetched} página(s))`,
     "",

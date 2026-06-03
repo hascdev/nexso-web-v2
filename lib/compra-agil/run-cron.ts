@@ -113,7 +113,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		const { error } = await resend.emails.send({
 			from: mailConfig.from,
 			to: mailConfig.to,
-			subject: `[Nexso] ${matched.length} Compra Ágil (${formatKeywordsShort(apiConfig.filterRules)})`,
+			subject: `[Nexso] ${matched.length} ${matched.length === 1 ? "oportunidad" : "oportunidades"} en Compra Ágil`,
 			html: buildCompraAgilEmailHtml(emailPayload),
 			text: buildCompraAgilEmailText(emailPayload),
 		});
