@@ -57,7 +57,7 @@ for (const [i, c] of CASES.entries()) {
 	const rulesOk =
 		!("expectRules" in c && c.expectRules) ||
 		(c.expectRules.every((r) => reasons.includes(r)) &&
-			reasons.every((r) => c.expectRules!.includes(r)));
+			reasons.every((r) => c.expectRules!.includes(r as never)));
 	const ok = matched === c.expectMatch && rulesOk;
 	if (ok) passed++;
 
