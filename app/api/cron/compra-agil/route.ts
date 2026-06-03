@@ -3,8 +3,8 @@ import { logCompraAgilError } from "@/lib/compra-agil/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Varias páginas + pausas; en Pro puedes subirlo en el dashboard si hace falta. */
-export const maxDuration = 60;
+/** Pro: hasta 300 s. Hobby queda limitado a 60 s por Vercel. */
+export const maxDuration = 300;
 
 function isAuthorized(request: Request): boolean {
 	const secret = process.env.CRON_SECRET?.trim();

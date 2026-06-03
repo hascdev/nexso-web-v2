@@ -27,6 +27,8 @@ export type CompraAgilConfig = {
 	/** Tope opcional de páginas; `null` = recorrer todas según `total_paginas`. */
 	maxPagesCap: number | null;
 	maxRetries: number;
+	/** Timeout por request a la API (ms). */
+	fetchTimeoutMs: number;
 	estado: string;
 };
 
@@ -38,6 +40,7 @@ export function getCompraAgilConfig(): CompraAgilConfig | null {
 	const pageDelayMs = Number(process.env.COMPRA_AGIL_PAGE_DELAY_MS ?? "400");
 	const maxPagesRaw = process.env.COMPRA_AGIL_MAX_PAGES?.trim();
 	const maxRetries = Number(process.env.COMPRA_AGIL_MAX_RETRIES ?? "3");
+	const fetchTimeoutMs = Number(process.env.COMPRA_AGIL_FETCH_TIMEOUT_MS ?? "20000");
 
 	let maxPagesCap: number | null = null;
 	if (maxPagesRaw && maxPagesRaw !== "0") {
@@ -64,6 +67,10 @@ export function getCompraAgilConfig(): CompraAgilConfig | null {
 			Number.isFinite(maxRetries) && maxRetries >= 0
 				? Math.floor(maxRetries)
 				: 3,
+		fetchTimeoutMs:
+			Number.isFinite(fetchTimeoutMs) && fetchTimeoutMs > 0
+				? Math.floor(fetchTimeoutMs)
+				: 20_000,
 		estado: process.env.COMPRA_AGIL_ESTADO?.trim() || "publicada",
 	};
 }

@@ -100,7 +100,8 @@ Crea `.env.local` en la raíz (no commitear). Referencia:
 | `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
 | `COMPRA_AGIL_KEYWORDS` | Opcional; reglas activas separadas por coma: `software,licencia,desarrollo,plataforma` (default: todas) |
 | `COMPRA_AGIL_PAGE_SIZE` | Opcional; 15–50 (API); default `50` |
-| `COMPRA_AGIL_PAGE_DELAY_MS` | Opcional; pausa entre páginas; default `400` |
+| `COMPRA_AGIL_PAGE_DELAY_MS` | Opcional; pausa entre páginas; default `400` (sube automáticamente tras 429) |
+| `COMPRA_AGIL_FETCH_TIMEOUT_MS` | Opcional; timeout por request API; default `20000` |
 | `COMPRA_AGIL_MAX_PAGES` | Opcional; tope de páginas (`0` o vacío = todas) |
 | `COMPRA_AGIL_MAX_RETRIES` | Opcional; reintentos ante HTTP 429; default `3` |
 | `COMPRA_AGIL_FROM_EMAIL` | Opcional; remitente alertas (si no, usa `CONTACT_FROM_EMAIL`) |
@@ -113,6 +114,8 @@ En **Vercel**, configura las mismas variables en el proyecto y despliega; el cro
 1. Conecta el repositorio e importa el proyecto (root: `nexso-web-v2` si el monorepo lo requiere).
 2. Añade todas las variables de entorno anteriores.
 3. Deploy: el cron se registra automáticamente desde `vercel.json`.
+
+El cron tiene **maxDuration 300 s** (requiere plan **Pro**). En Hobby el tope de Vercel es 60 s; con muchas páginas y rate limit (429) puede no alcanzar. Si ves `Task timed out after 60 seconds`, confirma plan Pro o sube `COMPRA_AGIL_PAGE_DELAY_MS` (ej. `800`) para reducir 429.
 
 Documentación: [Next.js en Vercel](https://nextjs.org/docs/app/building-your-application/deploying), [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs).
 

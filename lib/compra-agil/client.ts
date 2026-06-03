@@ -4,6 +4,8 @@ import type {
 	CompraAgilPaginacion,
 } from "./types";
 import type { CompraAgilConfig } from "./config";
+import type { FilterRuleId } from "./filter";
+import { filterCompraAgilItems } from "./filter";
 import { logCompraAgil } from "./logger";
 import { retryDelayMs, sleep } from "./rate-limit";
 
@@ -13,11 +15,12 @@ export type FetchCompraAgilParams = {
 	cambioHasta: string;
 };
 
-export type FetchCompraAgilResult = {
-	items: CompraAgilItem[];
-	paginacion: CompraAgilPaginacion | null;
-	pagesFetched: number;
+export type FetchCompraAgilFilteredResult = {
+	matched: CompraAgilItem[];
+	totalFetched: number;
 	totalResultados: number;
+	pagesFetched: number;
+	rateLimitEvents: number;
 };
 
 function buildListUrl(
@@ -46,7 +49,10 @@ export function buildDetailUrl(
 async function fetchCompraAgilPage(
 	config: CompraAgilConfig,
 	url: string,
+	onRateLimited?: () => void,
 ): Promise<CompraAgilApiResponse> {
+	const timeoutMs = config.fetchTimeoutMs;
+
 	for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
 		const res = await fetch(url, {
 			headers: {
@@ -54,9 +60,11 @@ async function fetchCompraAgilPage(
 				Accept: "application/json",
 			},
 			cache: "no-store",
+			signal: AbortSignal.timeout(timeoutMs),
 		});
 
 		if (res.status === 429) {
+			onRateLimited?.();
 			if (attempt >= config.maxRetries) {
 				throw new Error(
 					"Compra Ágil API: rate limit (429) tras reintentos. Aumenta COMPRA_AGIL_PAGE_DELAY_MS.",
@@ -90,14 +98,21 @@ async function fetchCompraAgilPage(
  * Recorre todas las páginas reportadas en `paginacion.total_paginas`
  * (o hasta `maxPagesCap` si está configurado).
  */
-export async function fetchCompraAgilChanges(
+/**
+ * Pagina la API y filtra por página (no acumula todos los ítems en memoria).
+ */
+export async function fetchCompraAgilFiltered(
 	config: CompraAgilConfig,
 	params: FetchCompraAgilParams,
-): Promise<FetchCompraAgilResult> {
-	const allItems: CompraAgilItem[] = [];
+	filterRules: FilterRuleId[],
+): Promise<FetchCompraAgilFilteredResult> {
+	const matched: CompraAgilItem[] = [];
 	let lastPagination: CompraAgilPaginacion | null = null;
 	let page = 1;
 	let totalPages = 1;
+	let totalFetched = 0;
+	let rateLimitEvents = 0;
+	let interPageDelayMs = config.pageDelayMs;
 
 	while (page <= totalPages) {
 		if (config.maxPagesCap !== null && page > config.maxPagesCap) {
@@ -111,10 +126,18 @@ export async function fetchCompraAgilChanges(
 		const data = await fetchCompraAgilPage(
 			config,
 			buildListUrl(config, params, page),
+			() => {
+				rateLimitEvents += 1;
+				interPageDelayMs = Math.min(
+					5000,
+					Math.max(interPageDelayMs, config.pageDelayMs) * 2,
+				);
+			},
 		);
 
 		const pageItems = data.payload!.items;
-		allItems.push(...pageItems);
+		totalFetched += pageItems.length;
+		matched.push(...filterCompraAgilItems(pageItems, filterRules));
 		lastPagination = data.payload!.paginacion;
 		totalPages = lastPagination.total_paginas;
 
@@ -122,8 +145,10 @@ export async function fetchCompraAgilChanges(
 			page,
 			totalPages,
 			itemsInPage: pageItems.length,
-			accumulated: allItems.length,
+			accumulated: totalFetched,
+			matchedSoFar: matched.length,
 			totalResultados: lastPagination.total_resultados,
+			interPageDelayMs,
 			cambioDesde: params.cambioDesde,
 			cambioHasta: params.cambioHasta,
 		});
@@ -133,16 +158,17 @@ export async function fetchCompraAgilChanges(
 		}
 
 		page += 1;
-		if (config.pageDelayMs > 0) {
-			await sleep(config.pageDelayMs);
+		if (interPageDelayMs > 0) {
+			await sleep(interPageDelayMs);
 		}
 	}
 
 	return {
-		items: allItems,
-		paginacion: lastPagination,
+		matched,
+		totalFetched,
+		totalResultados: lastPagination?.total_resultados ?? totalFetched,
 		pagesFetched: page,
-		totalResultados: lastPagination?.total_resultados ?? allItems.length,
+		rateLimitEvents,
 	};
 }
 

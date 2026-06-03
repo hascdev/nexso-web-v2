@@ -1,24 +1,17 @@
-import { Resend } from "resend";
-import { fetchCompraAgilChanges } from "./client";
-import {
-	formatKeywordsLabel,
-	formatKeywordsShort,
-	getCompraAgilConfig,
-	getCompraAgilMailConfig,
-} from "./config";
+import { fetchCompraAgilFiltered } from "./client";
+import { formatKeywordsLabel, getCompraAgilConfig, getCompraAgilMailConfig } from "./config";
 import {
 	buildCompraAgilEmailHtml,
 	buildCompraAgilEmailText,
 } from "./email-template";
-import {
-	filterCompraAgilItems,
-	getMatchReasons,
-} from "./filter";
+import { getMatchReasons } from "./filter";
 import { logCompraAgil } from "./logger";
 import { getLastCompleteHourWindowChile } from "./timezone";
+import { Resend } from "resend";
+
+const LOG_MATCHED_SAMPLE = 25;
 
 export type CronWindow = {
-	/** Valores enviados a `cambio_desde` / `cambio_hasta` (hora civil Chile + Z). */
 	desde: string;
 	hasta: string;
 	desdeChile: string;
@@ -32,6 +25,7 @@ export type CronRunResult = {
 	totalResultados: number;
 	matched: number;
 	pagesFetched: number;
+	rateLimitEvents: number;
 	emailed: boolean;
 	window: CronWindow;
 	durationMs: number;
@@ -66,34 +60,45 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 		estado: apiConfig.estado,
 		pageSize: apiConfig.pageSize,
 		pageDelayMs: apiConfig.pageDelayMs,
+		fetchTimeoutMs: apiConfig.fetchTimeoutMs,
 		maxPagesCap: apiConfig.maxPagesCap,
 		emailToCount: mailConfig.to.length,
 	});
 
 	const fetchStartedAt = Date.now();
-	const { items, pagesFetched, totalResultados } =
-		await fetchCompraAgilChanges(apiConfig, {
+	const {
+		matched,
+		totalFetched,
+		totalResultados,
+		pagesFetched,
+		rateLimitEvents,
+	} = await fetchCompraAgilFiltered(
+		apiConfig,
+		{
 			cambioDesde: hourWindow.api.desde,
 			cambioHasta: hourWindow.api.hasta,
-		});
+		},
+		apiConfig.filterRules,
+	);
 
 	logCompraAgil("fetch_completed", {
 		pagesFetched,
 		totalResultados,
-		totalFetched: items.length,
+		totalFetched,
+		matched: matched.length,
+		rateLimitEvents,
 		fetchDurationMs: Date.now() - fetchStartedAt,
 		window,
 	});
 
-	const matched = filterCompraAgilItems(items, apiConfig.filterRules);
-
 	logCompraAgil("filter_completed", {
 		filterRules: apiConfig.filterRules,
 		matched: matched.length,
-		matchedItems: matched.map((item) => ({
+		matchedSample: matched.slice(0, LOG_MATCHED_SAMPLE).map((item) => ({
 			codigo: item.codigo,
 			reasons: getMatchReasons(item.nombre, apiConfig.filterRules),
 		})),
+		matchedSampleTruncated: matched.length > LOG_MATCHED_SAMPLE,
 	});
 
 	let emailed = false;
@@ -105,7 +110,7 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 			desde: hourWindow.desde,
 			hasta: hourWindow.hasta,
 			items: matched,
-			totalFetched: items.length,
+			totalFetched,
 			pagesFetched,
 			detailBase: apiConfig.detailBase,
 		};
@@ -132,10 +137,11 @@ export async function runCompraAgilCron(): Promise<CronRunResult> {
 
 	const result: CronRunResult = {
 		ok: true,
-		totalFetched: items.length,
+		totalFetched,
 		totalResultados,
 		matched: matched.length,
 		pagesFetched,
+		rateLimitEvents,
 		emailed,
 		window,
 		durationMs: Date.now() - startedAt,
