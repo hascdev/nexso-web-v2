@@ -1,4 +1,5 @@
 import { ArrowRight, Sparkle } from "@phosphor-icons/react/dist/ssr";
+import { WHATSAPP_URL } from "@/lib/whatsapp";
 import { Reveal } from "./Reveal";
 import { HeroTransformVisual } from "./HeroTransformVisual";
 
@@ -64,7 +65,9 @@ export function Hero() {
           <Reveal playOnMount delay={0.22}>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
-                href="#contacto"
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-medium text-on-primary transition-[transform,background-color] duration-200 ease-[var(--ease-out-strong)] hover:bg-primary-strong active:scale-[0.97]"
               >
                 Conversemos

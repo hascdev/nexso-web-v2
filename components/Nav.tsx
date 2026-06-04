@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { List, X } from "@phosphor-icons/react";
+import { WHATSAPP_URL } from "@/lib/whatsapp";
 import { Wordmark } from "./Wordmark";
 
 const LINKS = [
@@ -61,7 +62,9 @@ export function Nav() {
 
           <div className="flex items-center gap-3">
             <a
-              href="#contacto"
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="hidden rounded-full bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-[transform,background-color] duration-200 ease-[var(--ease-out-strong)] hover:bg-primary-strong active:scale-[0.97] sm:inline-flex"
             >
               Conversemos
@@ -112,7 +115,9 @@ export function Nav() {
               ))}
               <li className="px-4 pt-4">
                 <a
-                  href="#contacto"
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => setOpen(false)}
                   className="inline-flex w-full items-center justify-center rounded-full bg-primary px-5 py-3 text-base font-medium text-on-primary transition-transform duration-200 active:scale-[0.97]"
                 >

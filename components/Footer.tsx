@@ -1,3 +1,4 @@
+import { WHATSAPP_URL } from "@/lib/whatsapp";
 import { Wordmark } from "./Wordmark";
 
 const NAV = [
@@ -37,7 +38,9 @@ export function Footer() {
 
           <div className="flex flex-col gap-3">
             <a
-              href="#contacto"
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-on-primary transition-transform duration-200 ease-[var(--ease-out-strong)] active:scale-[0.97]"
             >
               Conversemos
