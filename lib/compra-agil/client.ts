@@ -37,13 +37,13 @@ function buildListUrl(
 	return url.toString();
 }
 
-export function buildDetailUrl(
-	detailBase: string,
-	detallePath: string,
-): string {
-	const base = detailBase.replace(/\/$/, "");
-	const path = detallePath.startsWith("/") ? detallePath : `/${detallePath}`;
-	return `${base}${path}`;
+/** URL pública de ficha en el buscador de Mercado Público. */
+export const DEFAULT_FICHA_URL =
+	"https://buscador.mercadopublico.cl/ficha";
+
+export function buildDetailUrl(fichaBase: string, codigo: string): string {
+	const base = (fichaBase || DEFAULT_FICHA_URL).replace(/\/$/, "");
+	return `${base}?code=${encodeURIComponent(codigo)}`;
 }
 
 async function fetchCompraAgilPage(

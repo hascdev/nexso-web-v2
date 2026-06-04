@@ -96,7 +96,7 @@ Crea `.env.local` en la raíz (no commitear). Referencia:
 | `CRON_SECRET` | Secreto para autorizar el cron (Vercel lo envía como `Bearer`) |
 | `MERCADO_PUBLICO_TICKET` | Ticket API Mercado Público (header `ticket`) |
 | `MERCADO_PUBLICO_API_BASE` | Opcional; default `https://api2.mercadopublico.cl` |
-| `COMPRA_AGIL_DETAIL_BASE` | Opcional; base URLs de detalle; default `https://www.mercadopublico.cl` |
+| `COMPRA_AGIL_DETAIL_BASE` | Opcional; base ficha buscador; default `https://buscador.mercadopublico.cl/ficha` |
 | `COMPRA_AGIL_ESTADO` | Opcional; default `publicada` |
 | `COMPRA_AGIL_KEYWORDS` | Opcional; reglas activas separadas por coma: `software,licencia,desarrollo,plataforma` (default: todas) |
 | `COMPRA_AGIL_PAGE_SIZE` | Opcional; 15–50 (API); default `50` |

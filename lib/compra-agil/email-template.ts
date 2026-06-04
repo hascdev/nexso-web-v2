@@ -26,8 +26,8 @@ function formatRange(desde: Date, hasta: Date): string {
   return `${fmt.format(desde)} – ${fmt.format(hasta)}`;
 }
 
-function renderItemRow(item: CompraAgilItem, detailBase: string): string {
-  const url = buildDetailUrl(detailBase, item.links.detalle);
+function renderItemRow(item: CompraAgilItem, fichaBase: string): string {
+  const url = buildDetailUrl(fichaBase, item.codigo);
   return `
     <tr>
       <td style="padding:14px 0;border-bottom:1px solid #e5e7eb;vertical-align:top;">
@@ -126,7 +126,7 @@ export function buildCompraAgilEmailText(options: {
   }
 
   const lines = items.map((item, i) => {
-    const url = buildDetailUrl(detailBase, item.links.detalle);
+    const url = buildDetailUrl(detailBase, item.codigo);
     return [
       `${i + 1}. ${item.codigo} — ${item.nombre}`,
       `   ${item.institucion.organismo_comprador} (${item.institucion.nombre_region.trim()})`,

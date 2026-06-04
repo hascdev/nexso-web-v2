@@ -1,7 +1,5 @@
-import {
-	type FilterRuleId,
-	parseFilterRules,
-} from "./filter";
+import { DEFAULT_FICHA_URL } from "./client";
+import { type FilterRuleId, parseFilterRules } from "./filter";
 
 const PAGE_SIZE_MIN = 15;
 const PAGE_SIZE_MAX = 50;
@@ -56,8 +54,7 @@ export function getCompraAgilConfig(): CompraAgilConfig | null {
 			process.env.MERCADO_PUBLICO_API_BASE?.trim() ||
 			"https://api2.mercadopublico.cl",
 		detailBase:
-			process.env.COMPRA_AGIL_DETAIL_BASE?.trim() ||
-			"https://www.mercadopublico.cl",
+			process.env.COMPRA_AGIL_DETAIL_BASE?.trim() || DEFAULT_FICHA_URL,
 		filterRules: parseFilterRules(process.env.COMPRA_AGIL_KEYWORDS?.trim()),
 		pageSize: clampPageSize(pageSize),
 		pageDelayMs:
